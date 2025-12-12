@@ -15,7 +15,7 @@ export default function RootLayout({ children }) {
       <body className="bg-gray-50 min-h-screen flex flex-col">
         
         
-        <div className="hidden lg:block">
+        <div className="">
           <Header />
         </div>
 
