@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #__next { height: 100%; }
+
+.container-desktop { max-width: 1180px; margin-left: auto; margin-right: auto; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+@media (min-width: 1024px) {
+  .desktop-grid { display: grid; grid-template-columns: 280px 1fr 300px; gap: 24px; align-items: start; }
+}
