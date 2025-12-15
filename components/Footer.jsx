@@ -14,10 +14,10 @@ export default function Footer() {
       <div className="max-w-6xl mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-3 gap-8 text-gray-800">
         {/* Logo Section */}
         <div className="flex flex-col items-center md:items-start">
-          {/* Put your DXN logo at public/logo-24.png or replace src with an external image */}
+          {/* Put your DXN logo at public/DXNTv.svg or replace src with an external image */}
           <Link href="/" aria-label="DXN TV home" className="inline-block">
             <Image
-              src="/logo-24.png"
+              src="/DXNTv.svg"
               alt="DXN TV"
               width={180}
               height={64}
