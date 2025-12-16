@@ -6,7 +6,8 @@ export default async function ProfilePage() {
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-3xl px-4 py-10">
-        {/* Header */}
+
+        {/* ================= HEADER ================= */}
         <div className="flex flex-col gap-6 md:flex-row md:items-center">
           <img
             src={user.avatar}
@@ -23,9 +24,15 @@ export default async function ProfilePage() {
             </div>
 
             <div className="mt-4 flex gap-6 text-sm">
-              <span><strong>{user.posts}</strong> posts</span>
-              <span><strong>{user.followers}</strong> followers</span>
-              <span><strong>{user.following}</strong> following</span>
+              <span>
+                <strong>{user.posts}</strong> posts
+              </span>
+              <span>
+                <strong>{user.followers}</strong> followers
+              </span>
+              <span>
+                <strong>{user.following}</strong> following
+              </span>
             </div>
 
             <div className="mt-4 text-sm">
@@ -38,17 +45,17 @@ export default async function ProfilePage() {
 
         <div className="my-8 border-t" />
 
-        {/* POSTS */}
+        {/* ================= POSTS GRID ================= */}
         <div className="grid grid-cols-3 gap-1 md:gap-4">
-          {user.postsList.map((post: any) => (
+          {user.postsList.map((post) => (
             <div
               key={post.id}
               className="relative aspect-square overflow-hidden bg-black"
             >
               {/* IMAGE */}
-              {post.type === "image" && (
+              {post.type === "image" && post.media && (
                 <img
-                  src={post.media[0]}
+                  src={(post.media as string[])[0]}
                   className="h-full w-full object-cover"
                 />
               )}
@@ -56,15 +63,16 @@ export default async function ProfilePage() {
               {/* VIDEO */}
               {post.type === "video" && (
                 <video
-                  src={post.media}
+                  src={post.media as string}
                   className="h-full w-full object-cover"
                   muted
+                  controls={false}
                 />
               )}
 
               {/* TEXT */}
               {post.type === "text" && (
-                <div className="flex h-full w-full items-center justify-center p-4 text-sm text-white text-center bg-slate-900">
+                <div className="flex h-full w-full items-center justify-center bg-slate-900 p-4 text-center text-sm text-white">
                   {post.content}
                 </div>
               )}
@@ -72,10 +80,11 @@ export default async function ProfilePage() {
           ))}
         </div>
 
-        {/* DEBUG / JSON */}
-        <pre className="mt-8 rounded-lg bg-black p-4 text-xs text-green-400 overflow-auto">
+        {/* ================= DEBUG JSON ================= */}
+        <pre className="mt-8 overflow-auto rounded-lg bg-black p-4 text-xs text-green-400">
           {JSON.stringify(user.postsList, null, 2)}
         </pre>
+
       </div>
     </div>
   );
