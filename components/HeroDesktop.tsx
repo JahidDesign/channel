@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Article } from "../lib/types";
+import { Article } from "../lib/types"; 
 import HeroLeft from "./hero/HeroLeft";
 import HeroMiddle from "./hero/HeroMiddle";
 import HeroRight from "./hero/HeroRight";
