@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Article } from "./types";
+import { Article } from "../lib/types";
 import FallbackImage from "./FallbackImage";
 
 type Props = {
