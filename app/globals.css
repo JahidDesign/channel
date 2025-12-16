@@ -9,5 +9,10 @@ html, body, #__next { height: 100%; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
 @media (min-width: 1024px) {
-  .desktop-grid { display: grid; grid-template-columns: 280px 1fr 300px; gap: 24px; align-items: start; }
+  .desktop-grid {
+    display: grid;
+    grid-template-columns: 280px 1fr 300px;
+    gap: 24px;
+    align-items: start;
+  }
 }

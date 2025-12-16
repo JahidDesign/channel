@@ -279,7 +279,7 @@ export default function Header() {
               {/* Logo container with glassmorphism */}
               <div className="relative w-full h-full bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg border border-gray-200/50 p-1.5 sm:p-2 overflow-hidden group-hover:border-red-300 transition-all">
                 <Image 
-                  src="/DXNTv.svg" 
+                  src="/DXNTvHead.svg" 
                   alt="DXN TV" 
                   fill 
                   className="object-contain p-0.5 drop-shadow-sm"
@@ -317,8 +317,7 @@ export default function Header() {
           </div>
 
           {/* Premium Mobile Menu Button */}
-          <button 
-            onClick={() => setShowMobileMenu(!showMobileMenu)}
+          <button onClick={() => setShowMobileMenu(!showMobileMenu)}
             className="md:hidden group relative p-2 sm:p-2.5 rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 hover:from-red-50 hover:to-pink-50 border border-gray-200 hover:border-red-300 text-gray-700 hover:text-red-600 transition-all duration-300 flex-shrink-0 shadow-sm hover:shadow-md"
           >
             <svg className="w-5 h-5 sm:w-6 sm:h-6 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
