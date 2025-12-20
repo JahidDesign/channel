@@ -1,34 +1,65 @@
-import NewsCard from "../../../components/NewsCard";
-import { getNewsByCategory } from "../../../components/lib/news";
+"use client";
 
-type PageProps = {
-  params: {
-    slug: string;
-  };
+import { useEffect, useState } from "react";
+import NewsCard from "../../../components/NewsCard";
+
+/* ===============================
+   TYPES
+=============================== */
+type News = {
+  id: number;
+  title: string;
+  body: string; 
 };
 
-export default function CategoryPage({ params }: PageProps) {
-  const news = getNewsByCategory(params.slug);
+export default function CategoryPage() {
+  const [news, setNews] = useState<News[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchNews = async () => {
+      try {
+        const res = await fetch(
+          "https://jsonplaceholder.typicode.com/posts"
+        );
+        const data = await res.json();
+        setNews(data);
+      } catch (err) {
+        console.error("API Error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNews();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="py-20 text-center text-gray-500">
+        Loading…
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6 capitalize">
-        {params.slug.replace(/-/g, " ")} News
-      </h1>
+    <main className="bg-gray-50 min-h-screen">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <h1 className="text-2xl font-bold mb-6">
+          Category News
+        </h1>
 
-      {news.length === 0 ? (
-        <p className="text-gray-500">No news found</p>
-      ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {news.map((item) => (
             <NewsCard
               key={item.id}
+              id={item.id}
               title={item.title}
-              description={item.description}
+              description={item.body} 
             />
           ))}
         </div>
-      )}
-    </div>
+      </div>
+    </main>
   );
 }
