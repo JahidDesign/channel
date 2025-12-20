@@ -3,6 +3,7 @@
 import "./globals.css";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import MobileBottomNav from "../components/MobileBottomNav";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 
@@ -39,6 +40,14 @@ export const metadata: Metadata = {
   creator: "DXN TV",
   publisher: "DXN TV",
   metadataBase: new URL("https://dxntv.example"),
+
+  /* ✅ FAVICON CONFIG */
+  icons: {
+    icon: "/DXNTvHead.svg",
+    shortcut: "/DXNTvHead.svg",
+    apple: "/DXNTvHead.svg",
+  },
+
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -85,9 +94,16 @@ export default function RootLayout({
         </header>
 
         {/* Main */}
-        <main id="main-content" role="main" className="flex-1 w-full">
+        <main
+          id="main-content"
+          role="main"
+          className="flex-1 w-full pb-16"
+        >
           {children}
         </main>
+
+        {/* Mobile Bottom Navigation */}
+        <MobileBottomNav />
 
         {/* Footer */}
         <footer role="contentinfo" className="mt-auto">
