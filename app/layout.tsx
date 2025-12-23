@@ -4,44 +4,35 @@ import "./globals.css";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import MobileBottomNav from "../components/MobileBottomNav";
+import Providers from "./providers";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 
-/* =========================================
- * GLOBAL FONT
- * ========================================= */
 const inter = Inter({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-inter",
 });
 
-/* =========================================
- * SEO METADATA — DXN TV
- * ========================================= */
 export const metadata: Metadata = {
+  metadataBase: new URL("https://dxntv.example"),
+
   title: {
     default: "DXN TV | Latest News, Live TV & Updates",
     template: "%s | DXN TV",
   },
+
   description:
-    "DXN TV brings you the latest breaking news, live TV broadcasts, politics, sports, business, and entertainment updates.",
-  keywords: [
-    "DXN TV",
-    "Bangladesh News",
-    "Live TV",
-    "Breaking News",
-    "Politics",
-    "Sports",
-    "Business",
-    "Entertainment",
-  ],
+    "DXN TV brings you breaking news, live TV, politics, sports, business, technology, and entertainment updates from Bangladesh and worldwide.",
+
   authors: [{ name: "DXN TV News Team" }],
   creator: "DXN TV",
   publisher: "DXN TV",
-  metadataBase: new URL("https://dxntv.example"),
 
-  /* ✅ FAVICON CONFIG */
+  alternates: {
+    canonical: "/",
+  },
+
   icons: {
     icon: "/DXNTvHead.svg",
     shortcut: "/DXNTvHead.svg",
@@ -56,60 +47,83 @@ export const metadata: Metadata = {
     title: "DXN TV | Trusted News & Live Television",
     description:
       "Watch DXN TV for trusted journalism, live news coverage, and real-time updates.",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "DXN TV News",
+      },
+    ],
   },
+
   twitter: {
     card: "summary_large_image",
     site: "@dxntv",
     creator: "@dxntv",
+    title: "DXN TV | Latest News & Live TV",
+    description:
+      "Breaking news, politics, sports, business & entertainment on DXN TV.",
+    images: ["/og-image.jpg"],
   },
+
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
   },
 };
 
-/* =========================================
- * ROOT LAYOUT
- * ========================================= */
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning className={inter.variable}>
-      <body className="min-h-screen bg-gray-50 text-gray-900 antialiased flex flex-col">
+    <html lang="en" className={inter.variable} suppressHydrationWarning>
+      <body className="min-h-screen bg-gray-50 text-gray-900 flex flex-col">
 
-        {/* Skip to content (Accessibility) */}
-        <a
-          href="#main-content"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 bg-white text-black px-4 py-2 rounded-lg shadow-lg z-[9999]"
-        >
-          Skip to content
-        </a>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "NewsOrganization",
+              name: "DXN TV",
+              url: "https://dxntv.example",
+              logo: "https://dxntv.example/DXNTvHead.svg",
+              sameAs: [
+                "https://facebook.com/dxntv",
+                "https://twitter.com/dxntv",
+                "https://youtube.com/@dxntv",
+              ],
+            }),
+          }}
+        />
 
-        {/* Header */}
-        <header role="banner" className="relative z-50">
-          <Header />
-        </header>
+        <Providers>
+          <header role="banner" className="relative z-50">
+            <Header />
+          </header>
 
-        {/* Main */}
-        <main
-          id="main-content"
-          role="main"
-          className="flex-1 w-full pb-16"
-        >
-          {children}
-        </main>
+          <main id="main-content" className="flex-1 pb-16 lg:pb-0">
+            {children}
+          </main>
 
-        {/* Mobile Bottom Navigation */}
-        <MobileBottomNav />
+          <div className="lg:hidden">
+            <MobileBottomNav />
+          </div>
 
-        {/* Footer */}
-        <footer role="contentinfo" className="mt-auto">
-          <Footer />
-        </footer>
-
+          <footer role="contentinfo" className="mt-auto">
+            <Footer />
+          </footer>
+        </Providers>
       </body>
     </html>
   );

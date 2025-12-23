@@ -13,56 +13,35 @@ type News = {
 };
 
 /* ===============================
-   LAZY LOAD AD COMPONENT
+   CARD COMPONENT (LOCAL)
 =============================== */
-function LazyAd({ id }: { id: string }) {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const el = document.getElementById(id);
-    if (!el) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [id]);
-
+function NewsCard({ id, title, body }: News) {
   return (
-    <div
-      id={id}
-      className="border rounded-lg p-4 text-center min-h-[600px]"
-    >
-      <p className="font-semibold mb-2 text-sm">
-        Sponsored
-      </p>
+    <article className="overflow-hidden rounded-xl border bg-white hover:shadow-lg transition">
+      <img
+        src={`https://picsum.photos/seed/ent-${id}/600/400`}
+        alt={title}
+        className="h-48 w-full object-cover"
+      />
 
-      {visible ? (
-        <img
-          src="https://via.placeholder.com/160x600?text=Ad"
-          alt="Sponsor Ad"
-          className="mx-auto"
-          loading="lazy"
-        />
-      ) : (
-        <div className="h-[600px] flex items-center justify-center text-gray-400">
-          Loading Ad…
-        </div>
-      )}
-    </div>
+      <div className="p-4">
+        <Link
+          href={`/entertainment/${id}`}
+          className="block text-lg font-semibold mb-2 line-clamp-2 hover:text-blue-600"
+        >
+          {title}
+        </Link>
+
+        <p className="text-sm text-gray-600 line-clamp-3">
+          {body}
+        </p>
+      </div>
+    </article>
   );
 }
 
 /* ===============================
-   MAIN PAGE
+   MAIN PAGE (ONLY DEFAULT EXPORT)
 =============================== */
 export default function NewsCards() {
   const [news, setNews] = useState<News[]>([]);
@@ -97,10 +76,7 @@ export default function NewsCards() {
   =============================== */
   const totalPages = Math.ceil(news.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentNews = news.slice(
-    startIndex,
-    startIndex + itemsPerPage
-  );
+  const currentNews = news.slice(startIndex, startIndex + itemsPerPage);
 
   const goToPage = (page: number) => {
     setCurrentPage(page);
@@ -116,60 +92,32 @@ export default function NewsCards() {
   }
 
   return (
-    <main className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-12 gap-6">
-      {/* ================= LEFT AD ================= */}
-      <aside className="hidden lg:block lg:col-span-2">
-        <div className="sticky top-24">
-          <LazyAd id="ent-left-ad" />
-        </div>
-      </aside>
+    <main className="max-w-7xl mx-auto px-4 py-6">
+      {/* ================= GRID ================= */}
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        {currentNews.map((item) => (
+          <NewsCard
+            key={item.id}
+            id={item.id}
+            title={item.title}
+            body={item.body}
+          />
+        ))}
+      </div>
 
-      {/* ================= CONTENT ================= */}
-      <section className="col-span-12 lg:col-span-8">
-        <div className="grid gap-6 sm:grid-cols-2">
-          {currentNews.map((item) => (
-            <div
-              key={item.id}
-              className="overflow-hidden rounded-xl border bg-white hover:shadow-lg transition"
-            >
-              <img
-                src={`https://picsum.photos/seed/ent-${item.id}/600/400`}
-                alt={item.title}
-                className="h-48 w-full object-cover"
-              />
+      {/* ================= PAGINATION ================= */}
+      {totalPages > 1 && (
+        <div className="flex justify-center gap-2 mt-10 flex-wrap">
+          <button
+            onClick={() => goToPage(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="px-4 py-2 border rounded disabled:opacity-50"
+          >
+            Previous
+          </button>
 
-              <div className="p-4">
-                {/* TITLE CLICK → DETAILS PAGE */}
-                <Link
-                  href={`/entertainment/${item.id}`}
-                  className="block text-lg font-semibold mb-2 line-clamp-2 hover:text-blue-600"
-                >
-                  {item.title}
-                </Link>
-
-                <p className="text-sm text-gray-600 line-clamp-3">
-                  {item.body}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* ================= PAGINATION ================= */}
-        {totalPages > 1 && (
-          <div className="flex justify-center gap-2 mt-10 flex-wrap">
-            <button
-              onClick={() => goToPage(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="px-4 py-2 border rounded disabled:opacity-50"
-            >
-              Previous
-            </button>
-
-            {Array.from(
-              { length: totalPages },
-              (_, i) => i + 1
-            ).map((page) => (
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+            (page) => (
               <button
                 key={page}
                 onClick={() => goToPage(page)}
@@ -181,25 +129,18 @@ export default function NewsCards() {
               >
                 {page}
               </button>
-            ))}
+            )
+          )}
 
-            <button
-              onClick={() => goToPage(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="px-4 py-2 border rounded disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
-        )}
-      </section>
-
-      {/* ================= RIGHT AD ================= */}
-      <aside className="hidden lg:block lg:col-span-2">
-        <div className="sticky top-24">
-          <LazyAd id="ent-right-ad" />
+          <button
+            onClick={() => goToPage(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="px-4 py-2 border rounded disabled:opacity-50"
+          >
+            Next
+          </button>
         </div>
-      </aside>
+      )}
     </main>
   );
 }

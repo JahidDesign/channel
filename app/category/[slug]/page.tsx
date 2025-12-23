@@ -9,13 +9,16 @@ import NewsCard from "../../../components/NewsCard";
 type News = {
   id: number;
   title: string;
-  body: string; 
+  body: string;
 };
 
 export default function CategoryPage() {
   const [news, setNews] = useState<News[]>([]);
   const [loading, setLoading] = useState(true);
 
+  /* ===============================
+     API CALL
+  =============================== */
   useEffect(() => {
     const fetchNews = async () => {
       try {
@@ -49,13 +52,14 @@ export default function CategoryPage() {
           Category News
         </h1>
 
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {/* ================= GRID ================= */}
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {news.map((item) => (
             <NewsCard
               key={item.id}
               id={item.id}
               title={item.title}
-              description={item.body} 
+              body={item.body}
             />
           ))}
         </div>
