@@ -322,7 +322,7 @@ export default function ReelsPage() {
   return (
     <div
       ref={containerRef}
-      className="h-screen bg-white overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
+      className="h-screen  overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
       style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       onTouchStart={e => (touchStartY = e.touches[0].clientY)}
       onTouchEnd={e => {
