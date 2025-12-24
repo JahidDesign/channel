@@ -4,7 +4,8 @@ import "./globals.css";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import MobileBottomNav from "../components/MobileBottomNav";
-import Providers from "./providers";
+
+import Script from "next/script";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 
@@ -89,41 +90,48 @@ export default function RootLayout({
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <body className="min-h-screen bg-gray-50 text-gray-900 flex flex-col">
 
-        <script
+        
+        <Script
+          id="news-organization-schema"
           type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
+          strategy="afterInteractive"
+        >
+          {`
+            {
               "@context": "https://schema.org",
               "@type": "NewsOrganization",
-              name: "DXN TV",
-              url: "https://dxntv.example",
-              logo: "https://dxntv.example/DXNTvHead.svg",
-              sameAs: [
+              "name": "DXN TV",
+              "url": "https://dxntv.example",
+              "logo": "https://dxntv.example/DXNTvHead.svg",
+              "sameAs": [
                 "https://facebook.com/dxntv",
                 "https://twitter.com/dxntv",
-                "https://youtube.com/@dxntv",
-              ],
-            }),
-          }}
-        />
+                "https://youtube.com/@dxntv"
+              ]
+            }
+          `}
+        </Script>
 
-        <Providers>
-          <header role="banner" className="relative z-50">
-            <Header />
-          </header>
+        {/* Header */}
+        <header role="banner" className="relative z-50">
+          <Header />
+        </header>
 
-          <main id="main-content" className="flex-1 pb-16 lg:pb-0">
-            {children}
-          </main>
+        {/* Main Content */}
+        <main id="main-content" className="flex-1 pb-16 lg:pb-0">
+          {children}
+        </main>
 
-          <div className="lg:hidden">
-            <MobileBottomNav />
-          </div>
+        {/* Mobile Navigation */}
+        <div className="lg:hidden">
+          <MobileBottomNav />
+        </div>
 
-          <footer role="contentinfo" className="mt-auto">
-            <Footer />
-          </footer>
-        </Providers>
+        {/* Footer */}
+        <footer role="contentinfo" className="mt-auto">
+          <Footer />
+        </footer>
+
       </body>
     </html>
   );
