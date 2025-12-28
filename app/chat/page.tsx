@@ -1,145 +1,43 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
 
+import { useEffect, useState, useRef } from "react";
 
-const socket = {
-  emit: (event: string, data: any) => {
-    console.log("Socket emit:", event, data);
-  },
-  on: (event: string, callback: (data: any) => void) => {
-    console.log("Socket on:", event);
-  },
-  off: (event: string) => {
-    console.log("Socket off:", event);
-  }
+type Seat = {
+  id: number;
+  user: null | {
+    id: string;
+    name: string;
+  };
 };
 
-type Msg = any;
+type Message = {
+  id: string;
+  type: "chat" | "system" | "emoji";
+  userId: string;
+  userName: string;
+  content: string;
+  timestamp: number;
+};
 
-// SVG Icons
-const SendIcon = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-  </svg>
-);
+type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
 
-const MicIcon = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
-    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
-  </svg>
-);
+const EMOJIS = ["❤️", "👍", "😂", "🎉", "🔥", "👏", "😍", "✨"];
 
-const EmojiIcon = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-    <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" />
-  </svg>
-);
-
-const CameraIcon = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-    <path d="M12 15.2c-2.1 0-3.8-1.7-3.8-3.8s1.7-3.8 3.8-3.8 3.8 1.7 3.8 3.8-1.7 3.8-3.8 3.8zm0-6.3c-1.4 0-2.5 1.1-2.5 2.5s1.1 2.5 2.5 2.5 2.5-1.1 2.5-2.5-1.1-2.5-2.5-2.5z" />
-    <path d="M20 5h-3.2L15 3H9L7.2 5H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 14H4V7h4.05l1.83-2h4.24l1.83 2H20v12z" />
-  </svg>
-);
-
-const DocumentIcon = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-    <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6zm8-10H7v2h7v-2zm-7 4h10v2H7v-2z" />
-  </svg>
-);
-
-const ImageIcon = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-    <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z" />
-  </svg>
-);
-
-const CloseIcon = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-  </svg>
-);
-
-const PhoneIcon = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-    <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" />
-  </svg>
-);
-
-const VideoCallIcon = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-    <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
-  </svg>
-);
-
-const MenuIcon = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-    <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-  </svg>
-);
-
-const SearchIcon = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-    <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
-  </svg>
-);
-
-const CheckIcon = () => (
-  <svg viewBox="0 0 16 15" className="w-4 h-4 inline" fill="currentColor">
-    <path d="M15.01 3.316l-.478-.372a.365.365 0 0 0-.51.063L8.666 9.879a.32.32 0 0 1-.484.033l-.358-.325a.319.319 0 0 0-.484.032l-.378.483a.418.418 0 0 0 .036.541l1.32 1.266c.143.14.361.125.484-.033l6.272-8.048a.366.366 0 0 0-.064-.512zm-4.1 0l-.478-.372a.365.365 0 0 0-.51.063L4.566 9.879a.32.32 0 0 1-.484.033L1.891 7.769a.366.366 0 0 0-.515.006l-.423.433a.364.364 0 0 0 .006.514l3.258 3.185c.143.14.361.125.484-.033l6.272-8.048a.365.365 0 0 0-.063-.51z" />
-  </svg>
-);
-
-export default function Chat() {
-  const [msgs, setMsgs] = useState<Msg[]>([
-    {
-      _id: "1",
-      chatId: "group1",
-      senderId: "u2",
-      senderName: "John",
-      type: "text",
-      text: "Hey! How are you?",
-      timestamp: new Date(Date.now() - 3600000),
-      seenBy: ["u1"],
-    },
-    {
-      _id: "2",
-      chatId: "group1",
-      senderId: "u1",
-      senderName: "Ali",
-      type: "text",
-      text: "I'm good! Thanks for asking 😊",
-      timestamp: new Date(Date.now() - 3000000),
-      seenBy: ["u2"],
-    },
-    {
-      _id: "3",
-      chatId: "group1",
-      senderId: "u2",
-      senderName: "John",
-      type: "text",
-      text: "Want to grab coffee later?",
-      timestamp: new Date(Date.now() - 1800000),
-      seenBy: [],
-    },
-  ]);
-  const [text, setText] = useState("");
-  const [isRecording, setIsRecording] = useState(false);
-  const [showAttachMenu, setShowAttachMenu] = useState(false);
-  const [previewFile, setPreviewFile] = useState<{ type: string; url: string; name?: string } | null>(null);
-  const [recordingDuration, setRecordingDuration] = useState(0);
-  const [showCallModal, setShowCallModal] = useState(false);
-  const [callType, setCallType] = useState<"voice" | "video" | null>(null);
-  const [isInCall, setIsInCall] = useState(false);
-  const userId = "u1";
-  const chatId = "group1";
-  const recorder = useRef<MediaRecorder | null>(null);
-  const audioChunks = useRef<Blob[]>([]);
+export default function RoomPage() {
+  const [seats, setSeats] = useState<Seat[]>([]);
+  const [name] = useState("User-" + Math.floor(Math.random() * 1000));
+  const [userId] = useState("uid-" + Math.random().toString(36).substr(2, 9));
+  const [mySeatId, setMySeatId] = useState<number | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("connecting");
+  const [isJoining, setIsJoining] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [messageInput, setMessageInput] = useState("");
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [floatingEmojis, setFloatingEmojis] = useState<Array<{id: string, emoji: string, x: number}>>([]);
+  const [showChat, setShowChat] = useState(false);
+  const hasInitialized = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -147,561 +45,495 @@ export default function Chat() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [msgs]);
+  }, [messages]);
 
-  // Socket connection
   useEffect(() => {
-    // Join chat room
-    socket.emit("join-chat", chatId);
+    if (hasInitialized.current) return;
+    hasInitialized.current = true;
 
-    // Listen for incoming messages
-    socket.on("receive-message", (json: string) => {
-      const message = JSON.parse(json);
-      setMsgs((prev) => [...prev, message]);
-    });
-
-    // Cleanup on unmount
-    return () => {
-      socket.off("receive-message");
-    };
-  }, [chatId]);
-
-  const send = (data: any) => {
-    // Emit to socket
-    socket.emit("send-message", JSON.stringify(data));
+    const initialSeats: Seat[] = Array.from({ length: 12 }, (_, i) => ({
+      id: i + 1,
+      user: null,
+    }));
+    setSeats(initialSeats);
     
-    // Add to local state for immediate feedback
-    setMsgs((p) => [...p, { ...data, _id: Date.now().toString(), timestamp: new Date() }]);
-  };
-
-  const sendText = () => {
-    if (!text.trim()) return;
-    send({
-      chatId,
-      senderId: userId,
-      senderName: "Ali",
-      type: "text",
-      text,
-      seenBy: [],
-    });
-    setText("");
-  };
-
-  const startRec = async () => {
-    try {
-      setIsRecording(true);
-      setRecordingDuration(0);
-      audioChunks.current = [];
+    setTimeout(() => {
+      setConnectionStatus("connected");
+      addSystemMessage("Welcome to the Live Room! 🎉");
+      addSystemMessage("This is a demo mode - real-time features will work when connected to Socket.IO");
       
-      // Start duration timer
-      const startTime = Date.now();
-      const durationInterval = setInterval(() => {
-        setRecordingDuration(Math.floor((Date.now() - startTime) / 1000));
-      }, 1000);
-      
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      recorder.current = new MediaRecorder(stream);
-      
-      // Collect audio chunks
-      recorder.current.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          audioChunks.current.push(e.data);
-        }
-      };
-      
-      // When recording stops, send the audio
-      recorder.current.onstop = async () => {
-        clearInterval(durationInterval);
-        const audioBlob = new Blob(audioChunks.current, { type: "audio/webm" });
+      // Add demo users
+      setTimeout(() => {
+        const demoUsers = [
+          { id: "demo1", name: "Alex" },
+          { id: "demo2", name: "Sam" },
+          { id: "demo3", name: "Jordan" }
+        ];
         
-        // Convert blob to base64 for socket transmission
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64Audio = reader.result as string;
-          
-          // Send via socket
-          send({
-            chatId,
-            senderId: userId,
-            senderName: "Ali",
-            type: "audio",
-            audioData: base64Audio,
-            duration: recordingDuration,
-            seenBy: [],
-          });
-        };
-        reader.readAsDataURL(audioBlob);
+        setSeats(prev => prev.map((s, idx) => {
+          if (idx < 3) {
+            return { ...s, user: demoUsers[idx] };
+          }
+          return s;
+        }));
         
-        // Stop all tracks
-        stream.getTracks().forEach(track => track.stop());
-        setIsRecording(false);
-        setRecordingDuration(0);
-      };
-      
-      recorder.current.start();
-    } catch (error) {
-      console.error("Microphone access denied:", error);
-      setIsRecording(false);
-    }
+        addSystemMessage("👋 Alex joined the room!");
+        setTimeout(() => addSystemMessage("👋 Sam joined the room!"), 1000);
+        setTimeout(() => addSystemMessage("👋 Jordan joined the room!"), 2000);
+        
+        // Demo messages
+        setTimeout(() => {
+          addChatMessage("Hey everyone! 👋", "Alex", "demo1");
+        }, 3000);
+        
+        setTimeout(() => {
+          addChatMessage("Welcome! This is a demo of the live room", "Sam", "demo2");
+        }, 4500);
+        
+        setTimeout(() => {
+          const demoEmoji: Message = {
+            id: Math.random().toString(36),
+            type: "emoji",
+            userId: "demo3",
+            userName: "Jordan",
+            content: "🎉",
+            timestamp: Date.now(),
+          };
+          setMessages(prev => [...prev, demoEmoji]);
+        }, 6000);
+        
+      }, 2000);
+    }, 500);
+
+    return () => {};
+  }, []);
+
+  const addSystemMessage = (content: string) => {
+    const msg: Message = {
+      id: Math.random().toString(36),
+      type: "system",
+      userId: "system",
+      userName: "System",
+      content,
+      timestamp: Date.now(),
+    };
+    setMessages(prev => [...prev, msg]);
   };
 
-  const stopRec = () => {
-    if (recorder.current && recorder.current.state === "recording") {
-      recorder.current.stop();
-    }
+  const addChatMessage = (content: string, userName: string, userId: string) => {
+    const msg: Message = {
+      id: Math.random().toString(36),
+      type: "chat",
+      userId,
+      userName,
+      content,
+      timestamp: Date.now(),
+    };
+    setMessages(prev => [...prev, msg]);
   };
 
-  const formatTime = (date: Date) => {
-    return new Date(date).toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
+  const joinSeat = () => {
+    if (mySeatId !== null) {
+      return;
+    }
+
+    setIsJoining(true);
+    const availableSeat = seats.find(s => s.user === null);
+    
+    if (!availableSeat) {
+      setIsJoining(false);
+      return;
+    }
+
+    setTimeout(() => {
+      setSeats(prev => prev.map(s => 
+        s.id === availableSeat.id 
+          ? { ...s, user: { id: userId, name } }
+          : s
+      ));
+      setMySeatId(availableSeat.id);
+      setIsJoining(false);
+      addSystemMessage(`👋 ${name} joined the room!`);
+    }, 300);
+  };
+
+  const leaveSeat = () => {
+    if (mySeatId === null) return;
+    
+    setSeats(prev => prev.map(s => 
+      s.id === mySeatId 
+        ? { ...s, user: null }
+        : s
+    ));
+    addSystemMessage(`${name} left the room`);
+    setMySeatId(null);
+  };
+
+  const sendMessage = () => {
+    if (!messageInput.trim() || mySeatId === null) return;
+
+    addChatMessage(messageInput, name, userId);
+    setMessageInput("");
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      sendText();
+      sendMessage();
     }
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: string) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const sendEmoji = (emoji: string) => {
+    if (mySeatId === null) return;
 
-    const url = URL.createObjectURL(file);
-    setPreviewFile({ type, url, name: file.name });
-    setShowAttachMenu(false);
-  };
-
-  const sendFile = () => {
-    if (!previewFile) return;
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64Data = reader.result as string;
-      
-      send({
-        chatId,
-        senderId: userId,
-        senderName: "Ali",
-        type: previewFile.type,
-        mediaUrl: base64Data,
-        fileName: previewFile.name,
-        seenBy: [],
-      });
-      
-      setPreviewFile(null);
+    const msg: Message = {
+      id: Math.random().toString(36),
+      type: "emoji",
+      userId,
+      userName: name,
+      content: emoji,
+      timestamp: Date.now(),
     };
+    setMessages(prev => [...prev, msg]);
 
-    fetch(previewFile.url)
-      .then(res => res.blob())
-      .then(blob => reader.readAsDataURL(blob));
+    const floatingId = Math.random().toString(36);
+    const randomX = Math.random() * 80 + 10;
+    setFloatingEmojis(prev => [...prev, { id: floatingId, emoji, x: randomX }]);
+
+    setTimeout(() => {
+      setFloatingEmojis(prev => prev.filter(e => e.id !== floatingId));
+    }, 3000);
+
+    setShowEmojiPicker(false);
   };
 
-  const cancelPreview = () => {
-    if (previewFile) {
-      URL.revokeObjectURL(previewFile.url);
-      setPreviewFile(null);
-    }
-  };
-
-  const initiateCall = (type: "voice" | "video") => {
-    setCallType(type);
-    setShowCallModal(true);
-    
-    // Emit call signal to socket
-    socket.emit("initiate-call", JSON.stringify({
-      chatId,
-      callerId: userId,
-      callerName: "Ali",
-      type,
-    }));
-  };
-
-  const acceptCall = () => {
-    setIsInCall(true);
-    // In real implementation, initialize WebRTC connection here
-    socket.emit("accept-call", JSON.stringify({ chatId, userId }));
-  };
-
-  const endCall = () => {
-    setShowCallModal(false);
-    setIsInCall(false);
-    setCallType(null);
-    socket.emit("end-call", JSON.stringify({ chatId, userId }));
-  };
-
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+  const occupiedCount = seats.filter(s => s.user).length;
+  const unreadCount = messages.length;
 
   return (
-    <div className="h-screen flex flex-col bg-white">
+    <div className="relative h-screen bg-gradient-to-br from-purple-900 via-purple-800 to-pink-900 text-white flex flex-col overflow-hidden">
+      
+      {/* Connection Status Banner */}
+      {connectionStatus !== "connected" && (
+        <div className={`px-4 py-2 text-center text-xs sm:text-sm ${
+          connectionStatus === "error" ? "bg-red-600" :
+          connectionStatus === "connecting" ? "bg-yellow-600" :
+          "bg-gray-600"
+        }`}>
+          {connectionStatus === "connecting" && "Connecting..."}
+          {connectionStatus === "disconnected" && "Reconnecting..."}
+          {connectionStatus === "error" && "Connection error"}
+        </div>
+      )}
+
       {/* Header */}
-      <div className="bg-[#202c33] text-white shadow-lg">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3">
-            {/* Avatar */}
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white font-bold text-lg shadow-lg">
-              J
-            </div>
-            <div>
-              <h3 className="font-semibold text-base">John Doe</h3>
-              <p className="text-xs text-black">online</p>
-            </div>
+      <div className="flex justify-between items-center px-3 sm:px-4 py-2 sm:py-3 bg-black/20 flex-shrink-0">
+        <div>
+          <div className="font-semibold text-sm sm:text-lg flex items-center gap-2">
+            Live Room
+            <span className="text-[10px] sm:text-xs bg-yellow-600/80 px-1.5 py-0.5 rounded">DEMO</span>
           </div>
-          <div className="flex items-center gap-6">
-            <button 
-              onClick={() => initiateCall("voice")}
-              className="hover:bg-[#2a3942] p-2 rounded-full transition-colors"
-            >
-              <PhoneIcon />
-            </button>
-            <button 
-              onClick={() => initiateCall("video")}
-              className="hover:bg-[#2a3942] p-2 rounded-full transition-colors"
-            >
-              <VideoCallIcon />
-            </button>
-            <button className="hover:bg-[#2a3942] p-2 rounded-full transition-colors">
-              <SearchIcon />
-            </button>
-            <button className="hover:bg-[#2a3942] p-2 rounded-full transition-colors">
-              <MenuIcon />
-            </button>
+          <div className="text-xs text-purple-200">
+            {occupiedCount} / {seats.length} online
           </div>
+        </div>
+        <div className="flex gap-1 sm:gap-2 items-center">
+          {/* Mobile Chat Toggle */}
+          <button
+            onClick={() => setShowChat(!showChat)}
+            className="lg:hidden relative px-2 sm:px-3 py-1 bg-purple-700 hover:bg-purple-600 rounded text-xs sm:text-sm transition-colors"
+          >
+            💬
+            {!showChat && unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center text-[10px]">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+          
+          {mySeatId !== null ? (
+            <>
+              <div className="hidden sm:flex px-2 sm:px-3 py-1 rounded bg-green-600/30 text-xs items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-green-400"></span>
+                <span className="hidden sm:inline">Seat {mySeatId}</span>
+              </div>
+              <button
+                onClick={leaveSeat}
+                className="rounded bg-red-600 hover:bg-red-700 px-2 sm:px-3 py-1 text-xs sm:text-sm transition-colors"
+              >
+                Leave
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={joinSeat}
+              disabled={isJoining || connectionStatus !== "connected"}
+              className="rounded bg-pink-600 hover:bg-pink-700 disabled:bg-gray-600 disabled:cursor-not-allowed px-2 sm:px-4 py-1 text-xs sm:text-sm transition-colors"
+            >
+              {isJoining ? "Joining..." : "Join"}
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Messages Area */}
-      <div 
-        className="flex-1 overflow-y-auto p-4 space-y-2"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          backgroundColor: "#0a1014"
-        }}
-      >
-        {msgs.map((m) => {
-          const isMe = m.senderId === userId;
-          return (
-            <div
-              key={m._id}
-              className={`flex ${isMe ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2 duration-200`}
-            >
-              <div
-                className={`max-w-[75%] sm:max-w-[65%] rounded-lg px-3 py-2 shadow-md ${
-                  isMe
-                    ? "bg-[#005c4b] text-white rounded-br-none"
-                    : "bg-[#202c33] text-white rounded-bl-none"
-                }`}
-              >
-                {!isMe && (
-                  <p className="text-xs font-semibold text-teal-400 mb-1">
-                    {m.senderName}
-                  </p>
-                )}
-                
-                {m.type === "text" && (
-                  <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
-                    {m.text}
-                  </p>
-                )}
-                
-                {m.type === "audio" && (m.mediaUrl || m.audioData) && (
-                  <audio 
-                    controls 
-                    src={m.mediaUrl || m.audioData} 
-                    className="w-full max-w-xs mt-1"
-                    style={{ height: "32px" }}
-                  />
-                )}
-
-                {m.type === "image" && m.mediaUrl && (
-                  <img 
-                    src={m.mediaUrl} 
-                    alt="Shared image" 
-                    className="max-w-full rounded-lg mt-1"
-                    style={{ maxHeight: "300px" }}
-                  />
-                )}
-
-                {m.type === "camera" && m.mediaUrl && (
-                  <img 
-                    src={m.mediaUrl} 
-                    alt="Camera photo" 
-                    className="max-w-full rounded-lg mt-1"
-                    style={{ maxHeight: "300px" }}
-                  />
-                )}
-
-                {m.type === "document" && m.mediaUrl && (
-                  <div className="flex items-center gap-2 bg-[#162229] p-3 rounded-lg mt-1">
-                    <DocumentIcon />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{m.fileName || "Document"}</p>
-                      <p className="text-xs text-gray-400">File</p>
-                    </div>
+      {/* Main Content Area */}
+      <div className="flex flex-1 overflow-hidden relative">
+        
+        {/* Seats Section */}
+        <div className={`${showChat ? 'hidden lg:flex' : 'flex'} flex-1 overflow-y-auto p-3 sm:p-6`}>
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 sm:gap-x-4 sm:gap-y-8 max-w-2xl mx-auto w-full">
+            {seats.map((seat) => {
+              const isMe = seat.user?.id === userId;
+              const isOccupied = seat.user !== null;
+              
+              return (
+                <div key={seat.id} className="flex flex-col items-center">
+                  <div className={`
+                    h-14 w-14 sm:h-20 sm:w-20 rounded-full flex items-center justify-center text-xs sm:text-sm
+                    transition-all duration-300 relative
+                    ${isMe ? "bg-gradient-to-br from-green-500 to-emerald-600 ring-2 sm:ring-4 ring-green-300/50" :
+                      isOccupied ? "bg-gradient-to-br from-pink-500 to-purple-600" :
+                      "bg-white/10 hover:bg-white/20 cursor-pointer border border-dashed sm:border-2 border-white/30"
+                    }
+                  `}>
+                    {isOccupied ? (
+                      <div className="text-center px-1 sm:px-2">
+                        <div className="font-semibold text-[10px] sm:text-xs leading-tight break-words">
+                          {seat.user.name}
+                        </div>
+                        {isMe && (
+                          <div className="text-[8px] sm:text-[10px] opacity-75 mt-0.5">(You)</div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xl sm:text-3xl text-white/50">＋</span>
+                    )}
                   </div>
-                )}
-                
-                <div className="flex items-center justify-end gap-1 mt-1">
-                  <span className="text-[10px] text-gray-300">
-                    {formatTime(m.timestamp)}
+                  <span className={`mt-1 sm:mt-2 text-[10px] sm:text-xs ${isMe ? "text-green-300 font-semibold" : "opacity-70"}`}>
+                    Seat {seat.id}
                   </span>
-                  {isMe && (
-                    <span className={m.seenBy?.length ? "text-blue-400" : "text-gray-400"}>
-                      <CheckIcon />
-                    </span>
-                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Chat Section - Desktop */}
+        <div className="hidden lg:flex w-96 bg-black/30 backdrop-blur-sm flex-col border-l border-white/10">
+          <ChatContent 
+            messages={messages}
+            messageInput={messageInput}
+            setMessageInput={setMessageInput}
+            showEmojiPicker={showEmojiPicker}
+            setShowEmojiPicker={setShowEmojiPicker}
+            mySeatId={mySeatId}
+            userId={userId}
+            sendMessage={sendMessage}
+            sendEmoji={sendEmoji}
+            handleKeyPress={handleKeyPress}
+            messagesEndRef={messagesEndRef}
+            chatContainerRef={chatContainerRef}
+          />
+        </div>
+
+        {/* Chat Section - Mobile Overlay */}
+        {showChat && (
+          <div className="lg:hidden absolute inset-0 bg-black/95 backdrop-blur-sm z-50 flex flex-col">
+            <div className="flex justify-between items-center px-4 py-3 bg-black/40 border-b border-white/10">
+              <div className="font-semibold">Live Chat</div>
+              <button
+                onClick={() => setShowChat(false)}
+                className="text-2xl hover:text-pink-400 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex-1 flex flex-col min-h-0">
+              <ChatContent 
+                messages={messages}
+                messageInput={messageInput}
+                setMessageInput={setMessageInput}
+                showEmojiPicker={showEmojiPicker}
+                setShowEmojiPicker={setShowEmojiPicker}
+                mySeatId={mySeatId}
+                userId={userId}
+                sendMessage={sendMessage}
+                sendEmoji={sendEmoji}
+                handleKeyPress={handleKeyPress}
+                messagesEndRef={messagesEndRef}
+                chatContainerRef={chatContainerRef}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Floating Emojis */}
+      {floatingEmojis.map(item => (
+        <div
+          key={item.id}
+          className="fixed bottom-0 text-3xl sm:text-5xl pointer-events-none z-40"
+          style={{
+            left: `${item.x}%`,
+            animation: 'float-up 3s ease-out forwards'
+          }}
+        >
+          {item.emoji}
+        </div>
+      ))}
+
+      {/* Mobile Bottom Indicator */}
+      {mySeatId !== null && (
+        <div className="lg:hidden px-3 py-2 bg-black/40 text-center text-xs text-green-300 flex-shrink-0">
+          <span className="inline-flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-green-400"></span>
+            You're in Seat {mySeatId}
+          </span>
+        </div>
+      )}
+
+      {/* CSS Animation */}
+      <style>{`
+        @keyframes float-up {
+          0% {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+          }
+          50% {
+            transform: translateY(-40vh) scale(1.2);
+            opacity: 0.8;
+          }
+          100% {
+            transform: translateY(-80vh) scale(0.8);
+            opacity: 0;
+          }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function ChatContent({ 
+  messages, 
+  messageInput, 
+  setMessageInput, 
+  showEmojiPicker, 
+  setShowEmojiPicker,
+  mySeatId,
+  userId,
+  sendMessage,
+  sendEmoji,
+  handleKeyPress,
+  messagesEndRef,
+  chatContainerRef
+}: {
+  messages: Message[];
+  messageInput: string;
+  setMessageInput: (val: string) => void;
+  showEmojiPicker: boolean;
+  setShowEmojiPicker: (val: boolean) => void;
+  mySeatId: number | null;
+  userId: string;
+  sendMessage: () => void;
+  sendEmoji: (emoji: string) => void;
+  handleKeyPress: (e: React.KeyboardEvent) => void;
+  messagesEndRef: React.RefObject<HTMLDivElement>;
+  chatContainerRef: React.RefObject<HTMLDivElement>;
+}) {
+  return (
+    <>
+      {/* Messages */}
+      <div 
+        ref={chatContainerRef}
+        className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3 min-h-0"
+      >
+        {messages.map((msg) => (
+          <div key={msg.id}>
+            {msg.type === "system" ? (
+              <div className="text-center text-xs text-purple-300 py-1">
+                {msg.content}
+              </div>
+            ) : msg.type === "emoji" ? (
+              <div className="text-center py-1">
+                <span className="inline-block text-xs text-purple-300 mr-2">
+                  {msg.userName}
+                </span>
+                <span className="text-2xl sm:text-3xl">{msg.content}</span>
+              </div>
+            ) : (
+              <div className={`flex ${msg.userId === userId ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[85%] sm:max-w-[80%] ${msg.userId === userId ? "bg-pink-600" : "bg-purple-700"} rounded-lg px-2 sm:px-3 py-1.5 sm:py-2`}>
+                  <div className="text-[10px] sm:text-xs opacity-75 mb-0.5 sm:mb-1">{msg.userName}</div>
+                  <div className="text-xs sm:text-sm break-words">{msg.content}</div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            )}
+          </div>
+        ))}
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input Area */}
-      <div className="bg-[#202c33] px-3 py-2 border-t border-[#2a3942]">
-        {/* Call Modal */}
-        {showCallModal && (
-          <div className="fixed inset-0 bg-gradient-to-b from-[#005c4b] to-[#003d33] z-50 flex flex-col items-center justify-between p-8">
-            {/* Caller Info */}
-            <div className="flex-1 flex flex-col items-center justify-center">
-              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white font-bold text-5xl shadow-2xl mb-6 animate-pulse">
-                J
-              </div>
-              <h2 className="text-white text-3xl font-semibold mb-2">John Doe</h2>
-              <p className="text-teal-200 text-lg">
-                {isInCall ? "Connected" : callType === "video" ? "Video calling..." : "Voice calling..."}
-              </p>
-              {isInCall && (
-                <p className="text-teal-300 text-sm mt-2">{formatDuration(recordingDuration)}</p>
-              )}
-            </div>
-
-            {/* Call Controls */}
-            <div className="flex gap-6 mb-8">
-              {!isInCall && (
-                <button
-                  onClick={acceptCall}
-                  className="w-16 h-16 bg-green-600 hover:bg-green-700 rounded-full flex items-center justify-center text-white shadow-lg hover:scale-110 transition-transform"
-                >
-                  <PhoneIcon />
-                </button>
-              )}
-              
-              {callType === "video" && isInCall && (
-                <>
-                  <button className="w-16 h-16 bg-[#2a3942] hover:bg-[#3a4952] rounded-full flex items-center justify-center text-white shadow-lg hover:scale-110 transition-transform">
-                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-                      <path d="M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h1.9c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H6V10h12v10z" />
-                    </svg>
-                  </button>
-                  <button className="w-16 h-16 bg-[#2a3942] hover:bg-[#3a4952] rounded-full flex items-center justify-center text-white shadow-lg hover:scale-110 transition-transform">
-                    <MicIcon />
-                  </button>
-                </>
-              )}
-              
-              <button
-                onClick={endCall}
-                className="w-16 h-16 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center text-white shadow-lg hover:scale-110 transition-transform"
-              >
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6 rotate-135">
-                  <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z" />
-                </svg>
-              </button>
-            </div>
+      <div className="p-3 sm:p-4 bg-black/20 border-t border-white/10 flex-shrink-0">
+        {mySeatId === null ? (
+          <div className="text-center text-xs sm:text-sm text-purple-300 py-2">
+            Join a seat to chat
           </div>
-        )}
+        ) : (
+          <div className="space-y-2">
+            {/* Emoji Picker */}
+            {showEmojiPicker && (
+              <div className="bg-purple-800 rounded-lg p-2 flex flex-wrap gap-2 justify-center">
+                {EMOJIS.map(emoji => (
+                  <button
+                    key={emoji}
+                    onClick={() => sendEmoji(emoji)}
+                    className="text-xl sm:text-2xl hover:scale-125 transition-transform active:scale-110"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            )}
 
-        {/* File Preview Modal */}
-        {previewFile && (
-          <div className="absolute inset-0 bg-black/90 z-50 flex flex-col">
-            <div className="flex items-center justify-between p-4 bg-[#202c33]">
-              <h3 className="text-white font-semibold">Preview</h3>
+            {/* Message Input */}
+            <div className="flex gap-1 sm:gap-2">
               <button
-                onClick={cancelPreview}
-                className="text-white hover:bg-[#2a3942] p-2 rounded-full"
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                className="px-2 sm:px-3 py-1.5 sm:py-2 bg-purple-700 hover:bg-purple-600 active:bg-purple-500 rounded-lg transition-colors text-lg sm:text-xl flex-shrink-0"
+                title="Emojis"
               >
-                <CloseIcon />
+                😊
               </button>
-            </div>
-            <div className="flex-1 flex items-center justify-center p-4 overflow-auto">
-              {previewFile.type === "image" || previewFile.type === "camera" ? (
-                <img src={previewFile.url} alt="Preview" className="max-w-full max-h-full rounded-lg" />
-              ) : (
-                <div className="bg-[#202c33] p-8 rounded-lg">
-                  <DocumentIcon />
-                  <p className="text-white mt-2">{previewFile.name}</p>
-                </div>
-              )}
-            </div>
-            <div className="p-4 bg-[#202c33] flex items-center gap-2">
               <input
                 type="text"
-                placeholder="Add a caption..."
-                className="flex-1 bg-[#2a3942] text-white px-4 py-3 rounded-lg outline-none"
+                value={messageInput}
+                onChange={(e) => setMessageInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Type your message..."
+                className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:border-pink-500 text-xs sm:text-sm min-w-0 placeholder:text-white/40"
               />
-              <button
-                onClick={sendFile}
-                className="bg-[#00a884] hover:bg-[#06cf9c] text-white p-3 rounded-full transition-all hover:scale-110 active:scale-95 shadow-lg"
-              >
-                <SendIcon />
-              </button>
+              {messageInput.trim() ? (
+                <button
+                  onClick={sendMessage}
+                  className="px-3 sm:px-4 py-1.5 sm:py-2 bg-pink-600 hover:bg-pink-700 active:bg-pink-800 rounded-lg transition-colors text-xs sm:text-sm font-semibold flex-shrink-0"
+                  title="Send message"
+                >
+                  Send ➤
+                </button>
+              ) : (
+                <button
+                  className="px-2 sm:px-3 py-1.5 sm:py-2 bg-red-600 hover:bg-red-700 active:bg-red-800 rounded-lg transition-colors text-lg sm:text-xl flex-shrink-0"
+                  title="Voice message (coming soon)"
+                  onClick={() => alert('🎤 Voice message feature coming soon!')}
+                >
+                  🎤
+                </button>
+              )}
             </div>
-          </div>
-        )}
-
-        {/* Attachment Menu */}
-        {showAttachMenu && (
-          <div className="absolute bottom-16 left-4 bg-[#233138] rounded-lg shadow-2xl p-2 animate-in fade-in slide-in-from-bottom-4 duration-200 z-40">
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-3 w-full px-4 py-3 hover:bg-[#2a3942] rounded-lg text-white transition-colors"
-            >
-              <div className="bg-purple-600 p-2 rounded-full">
-                <DocumentIcon />
-              </div>
-              <span className="text-sm">Document</span>
-            </button>
-            <button
-              onClick={() => imageInputRef.current?.click()}
-              className="flex items-center gap-3 w-full px-4 py-3 hover:bg-[#2a3942] rounded-lg text-white transition-colors"
-            >
-              <div className="bg-pink-600 p-2 rounded-full">
-                <ImageIcon />
-              </div>
-              <span className="text-sm">Photos & Videos</span>
-            </button>
-            <button
-              onClick={() => cameraInputRef.current?.click()}
-              className="flex items-center gap-3 w-full px-4 py-3 hover:bg-[#2a3942] rounded-lg text-white transition-colors"
-            >
-              <div className="bg-red-600 p-2 rounded-full">
-                <CameraIcon />
-              </div>
-              <span className="text-sm">Camera</span>
-            </button>
-            <button
-              onClick={() => {
-                setShowAttachMenu(false);
-                startRec();
-              }}
-              className="flex items-center gap-3 w-full px-4 py-3 hover:bg-[#2a3942] rounded-lg text-white transition-colors"
-            >
-              <div className="bg-green-600 p-2 rounded-full">
-                <MicIcon />
-              </div>
-              <span className="text-sm">Audio</span>
-            </button>
-          </div>
-        )}
-
-        {/* Hidden file inputs */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pdf,.doc,.docx,.txt,.zip"
-          onChange={(e) => handleFileSelect(e, "document")}
-          className="hidden"
-        />
-        <input
-          ref={imageInputRef}
-          type="file"
-          accept="image/*,video/*"
-          onChange={(e) => handleFileSelect(e, "image")}
-          className="hidden"
-        />
-        <input
-          ref={cameraInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          onChange={(e) => handleFileSelect(e, "camera")}
-          className="hidden"
-        />
-
-        <div className="flex items-end gap-2">
-          {/* Emoji & Attach */}
-          <div className="flex gap-1">
-            <button className="text-gray-400 hover:text-white p-2 hover:bg-[#2a3942] rounded-full transition-all">
-              <EmojiIcon />
-            </button>
-            <button
-              onClick={() => setShowAttachMenu(!showAttachMenu)}
-              className={`${
-                showAttachMenu ? "bg-[#2a3942] text-white" : "text-gray-400 hover:text-white"
-              } p-2 hover:bg-[#2a3942] rounded-full transition-all transform ${
-                showAttachMenu ? "rotate-45" : ""
-              }`}
-            >
-              <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-                <path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Text Input */}
-          <div className="flex-1 bg-[#2a3942] rounded-lg overflow-hidden">
-            <input
-              type="text"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Type a message"
-              className="w-full bg-transparent text-white px-4 py-3 outline-none placeholder-gray-500 text-sm"
-            />
-          </div>
-
-          {/* Send or Mic Button */}
-          {text.trim() ? (
-            <button
-              onClick={sendText}
-              className="bg-[#00a884] hover:bg-[#06cf9c] text-white p-3 rounded-full transition-all hover:scale-110 active:scale-95 shadow-lg"
-            >
-              <SendIcon />
-            </button>
-          ) : (
-            <button
-              onMouseDown={startRec}
-              onMouseUp={stopRec}
-              onTouchStart={startRec}
-              onTouchEnd={stopRec}
-              className={`${
-                isRecording
-                  ? "bg-red-600 animate-pulse"
-                  : "bg-[#00a884] hover:bg-[#06cf9c]"
-              } text-white p-3 rounded-full transition-all hover:scale-110 active:scale-95 shadow-lg`}
-            >
-              <MicIcon />
-            </button>
-          )}
-        </div>
-
-        {isRecording && (
-          <div className="flex items-center justify-center gap-3 mb-2 bg-[#162229] rounded-lg p-3 animate-in slide-in-from-bottom-2">
-            <div className="flex gap-1">
-              {[0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  className="w-1 h-8 bg-red-500 rounded-full animate-pulse"
-                  style={{ animationDelay: `${i * 0.15}s` }}
-                />
-              ))}
-            </div>
-            <span className="text-red-400 text-sm font-medium">
-              {formatDuration(recordingDuration)}
-            </span>
-            <span className="text-gray-400 text-xs flex-1">Recording... Swipe to cancel</span>
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }
